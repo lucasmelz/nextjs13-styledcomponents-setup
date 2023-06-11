@@ -1,34 +1,55 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# How to setup Styled-Components for Next.js 13 (using App Router and SWC compiler)
 
-## Getting Started
+## Step 1: add the following to your next.config.js file
 
-First, run the development server:
+```
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  compiler: {
+    styledComponents: true,
+  },
+}
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+module.exports = nextConfig
+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Step 2: create the registry.tsx file with the following code:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+'use client'
+ 
+import React, { useState } from 'react'
+import { useServerInsertedHTML } from 'next/navigation'
+import { ServerStyleSheet, StyleSheetManager } from 'styled-components'
+ 
+export default function StyledComponentsRegistry({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // Only create stylesheet once with lazy initial state
+  // x-ref: https://reactjs.org/docs/hooks-reference.html#lazy-initial-state
+  const [styledComponentsStyleSheet] = useState(() => new ServerStyleSheet())
+ 
+  useServerInsertedHTML(() => {
+    const styles = styledComponentsStyleSheet.getStyleElement()
+    styledComponentsStyleSheet.instance.clearTag()
+    return styles
+  })
+ 
+  if (typeof window !== 'undefined') return <>{children}</>
+ 
+  return (
+    <StyleSheetManager sheet={styledComponentsStyleSheet.instance}>
+      {children}
+    </StyleSheetManager>
+  )
+}
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```
 
-## Learn More
+## Step 3: add the 'use client' directive to your layout.tsx file and wrap all the children components on your layout with the StyledComponentsRegistry component.
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
